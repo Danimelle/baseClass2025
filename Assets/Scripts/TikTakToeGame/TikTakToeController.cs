@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class TikTakToeController : MonoBehaviour
 {
-
     public enum GameMode { TwoPlayer, SimpleAI, MiniMaxAi, AIvsAI } //game mode options
     [SerializeField] private GameMode _gameMode;
 
@@ -14,6 +13,9 @@ public class TikTakToeController : MonoBehaviour
     [Header("AIs")]
     [SerializeField] TicTakToeSimpleAI _simpleAI;
     [SerializeField] TicTakToeMinimaxAI _miniMaxAi;
+
+    [Header("UI")]
+    [SerializeField] TicTakToeUIUpdater _gameUI;
 
 
     private TicTakToeSlot[,] _ticTakToeBoard = new TicTakToeSlot[3, 3];
@@ -131,13 +133,13 @@ public class TikTakToeController : MonoBehaviour
         return true;
     }
 
-    public void ToggleSimpleAi(bool onOrOff)
+    private void ToggleSimpleAi(bool onOrOff)
     {
         _isSimpleAiTurn = onOrOff;
     }
 
 
-    public void OnSlotClicked(TicTakToeSlot slot)
+    public void OnSlotClicked(TicTakToeSlot slot) //connected to the buttons
     {
         if (slot.GetTextInSlot() != " " || _winner != "") //if the slot isnt emptky and the winner is announced return
             return;
@@ -153,7 +155,7 @@ public class TikTakToeController : MonoBehaviour
 
             _isItXTurn = !_isItXTurn; //switch turns
 
-            if (!_isItXTurn && _gameMode != GameMode.TwoPlayer && _winner == "") //if play mode is not tow players then run ai play
+            if (!_isItXTurn && _gameMode != GameMode.TwoPlayer && _winner == "" && !CheckTie()) //if play mode is not tow players then run ai play
             {
                 if (_gameMode == GameMode.SimpleAI)
                 {
@@ -234,11 +236,14 @@ public class TikTakToeController : MonoBehaviour
         {
             _winner = player;
             Debug.Log($"the winner is {player}");
+            _gameUI.UpdateWinStateText("Win", player);
             return;
         }
 
         if (CheckTie())
         {
+            _gameUI.UpdateWinStateText("Tie");
+
             Debug.Log("It's a tie");
         }
     }
