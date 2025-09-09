@@ -7,12 +7,14 @@ using UnityEngine;
 
 public class TicTakToeSlot : MonoBehaviour
 {
+    [SerializeField] GameObject _particalEffectPrefab;
     private TMP_Text slotText;
 
     private void Start()
     {
         slotText = GetComponentInChildren<TMP_Text>();
         slotText.text = " ";
+
     }
 
     public string GetTextInSlot()
@@ -27,5 +29,12 @@ public class TicTakToeSlot : MonoBehaviour
             slotText.text = player;
         }
     }
+
+    public void OnButtonClick()
+    {
+        Instantiate(_particalEffectPrefab, this.transform.position, this.transform.rotation);
+    }
+
+
 
 }
