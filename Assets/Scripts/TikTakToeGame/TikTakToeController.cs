@@ -7,6 +7,8 @@ public class TikTakToeController : MonoBehaviour
     public enum GameMode { TwoPlayer, SimpleAI, MiniMaxAi, AIvsAI } //game mode options
     [SerializeField] private GameMode _gameMode;
 
+    private System.Action _aiTypeTurn;
+
     [Header("slots")]
     public TicTakToeSlot[] ticTakToeSlots;
 
@@ -21,7 +23,7 @@ public class TikTakToeController : MonoBehaviour
     private TicTakToeSlot[,] _ticTakToeBoard = new TicTakToeSlot[3, 3];
 
     private bool _isItXTurn = true;
-    private bool _isSimpleAiTurn = false;
+    //private bool _isSimpleAiTurn = false;
     private string _winner = "";
 
 
@@ -29,12 +31,14 @@ public class TikTakToeController : MonoBehaviour
     {
         Create2DBoard();
 
+        InitializeAiMode(_gameMode);
 
         if (_gameMode == GameMode.AIvsAI)
         {
             StartCoroutine(PlayAIvsAI());
         }
     }
+
 
     private void Create2DBoard() //move the slots from the 1d array to a 2d array
     {
@@ -53,6 +57,19 @@ public class TikTakToeController : MonoBehaviour
             }
         }
         Debug.Log(_ticTakToeBoard.Length);
+    }
+
+
+    private void InitializeAiMode(GameMode gameMode)
+    {
+        if (gameMode == GameMode.SimpleAI)
+        {
+            _aiTypeTurn = SimpleAiTurn;
+        }
+        else if (gameMode == GameMode.MiniMaxAi)
+        {
+            _aiTypeTurn = MiniMaxAiTurn;
+        }
     }
 
     private bool CheckWin()
@@ -133,15 +150,15 @@ public class TikTakToeController : MonoBehaviour
         return true;
     }
 
-    private void ToggleSimpleAi(bool onOrOff)
-    {
-        _isSimpleAiTurn = onOrOff;
-    }
+    // private void ToggleSimpleAi(bool onOrOff)
+    // {
+    //     _isSimpleAiTurn = onOrOff;
+    // }
 
 
     public void OnSlotClicked(TicTakToeSlot slot) //connected to the buttons
     {
-        if (slot.GetTextInSlot() != " " || _winner != "") //if the slot isnt emptky and the winner is announced return
+        if (slot.GetTextInSlot() != " " || _winner != "" && _gameMode != GameMode.AIvsAI) //if the slot isnt emptky and the winner is announced return
             return;
 
         if (_gameMode == GameMode.TwoPlayer || _gameMode != GameMode.TwoPlayer && _isItXTurn)
@@ -151,28 +168,36 @@ public class TikTakToeController : MonoBehaviour
             slot.ChangeTextsInSlot(player);
             Debug.Log("placed: " + player);
 
-            CheckGameEnd(player);
+            if (CheckGameEnd(player))
+                return;
 
             _isItXTurn = !_isItXTurn; //switch turns
 
             if (!_isItXTurn && _gameMode != GameMode.TwoPlayer && _winner == "" && !CheckTie()) //if play mode is not tow players then run ai play
             {
-                if (_gameMode == GameMode.SimpleAI)
-                {
-                    _simpleAI.MakeMove(ticTakToeSlots);
-                    ToggleSimpleAi(false);
-                    CheckGameEnd("O");
-                    _isItXTurn = true;
-                    Debug.Log("ai turn");
-                }
-                else if (_gameMode == GameMode.MiniMaxAi)
-                {
-                    Vector2Int bestMove = _miniMaxAi.GetBestMove(CreateMiniMaxArray(_ticTakToeBoard), "O");
-                    TicTakToeSlot chosenSlot = _ticTakToeBoard[bestMove.x, bestMove.y];
-                    StartCoroutine(MiniMaxPlay(Random.Range(0.2f, 2), chosenSlot));
-                }
+                _aiTypeTurn.Invoke();
             }
         }
+    }
+
+
+    private void SimpleAiTurn()
+    {
+        _simpleAI.MakeMove(ticTakToeSlots);
+        //ToggleSimpleAi(false);
+
+        if (CheckGameEnd("O"))
+            return;
+
+        _isItXTurn = true;
+        Debug.Log("ai turn");
+    }
+
+    private void MiniMaxAiTurn()
+    {
+        Vector2Int bestMove = _miniMaxAi.GetBestMove(CreateMiniMaxArray(_ticTakToeBoard), "O");
+        TicTakToeSlot chosenSlot = _ticTakToeBoard[bestMove.x, bestMove.y];
+        StartCoroutine(MiniMaxPlay(Random.Range(0.2f, 2), chosenSlot));
     }
 
     private IEnumerator MiniMaxPlay(float delay, TicTakToeSlot chosenSlot)
@@ -181,6 +206,8 @@ public class TikTakToeController : MonoBehaviour
 
         chosenSlot.ChangeTextsInSlot("O");
         CheckGameEnd("O");
+
+
         _isItXTurn = true;
         Debug.Log("MINI MAX ai turn");
     }
@@ -218,7 +245,10 @@ public class TikTakToeController : MonoBehaviour
             yield return new WaitForSeconds(Random.Range(0.2f, 2));
 
             chosenSlot.ChangeTextsInSlot(currentPlayer);
-            CheckGameEnd(currentPlayer);
+            if (CheckGameEnd(currentPlayer))
+            {
+                break;
+            }
 
             _isItXTurn = !_isItXTurn;
 
@@ -230,14 +260,14 @@ public class TikTakToeController : MonoBehaviour
     }
 
 
-    private void CheckGameEnd(string player)
+    private bool CheckGameEnd(string player)
     {
         if (CheckWin())
         {
             _winner = player;
             Debug.Log($"the winner is {player}");
             _gameUI.UpdateWinStateText("Win", player);
-            return;
+            return true;
         }
 
         if (CheckTie())
@@ -245,7 +275,9 @@ public class TikTakToeController : MonoBehaviour
             _gameUI.UpdateWinStateText("Tie");
 
             Debug.Log("It's a tie");
+            return true;
         }
+        return false;
     }
 
     private string GetSlotText(int row, int col)
